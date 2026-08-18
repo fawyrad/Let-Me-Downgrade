@@ -1,3 +1,4 @@
+@file:Suppress("BlockedPrivateApi")
 package com.berdik.letmedowngrade.hookers
 
 import android.annotation.SuppressLint
