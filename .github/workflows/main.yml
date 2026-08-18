@@ -1,0 +1,187 @@
+name: Build, Sign and Release APK
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # ==============================
+      # Checkout
+      # ==============================
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # ==============================
+      # Java
+      # ==============================
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # ==============================
+      # Gradle permission
+      # ==============================
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      # ==============================
+      # Generate short commit SHA for APK and release naming
+      # ==============================
+      - name: Generate short commit SHA
+        shell: bash
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+
+          echo "Short SHA: $SHORT_SHA"
+
+      # ==============================
+      # Restore embedded signing key
+      # ==============================
+      - name: Restore signing key
+        shell: bash
+        run: |
+          cat <<'EOF' | base64 --decode > key.jks
+          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
+          EOF
+
+          chmod 600 key.jks
+
+          if [ ! -s key.jks ]; then
+            echo "ERROR: Failed to restore keystore!"
+            exit 1
+          fi
+
+      # ==============================
+      # Build unsigned APK
+      # ==============================
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      # ==============================
+      # Find APK
+      # ==============================
+      - name: Find Release APK
+        id: apk
+        shell: bash
+        run: |
+          echo "=== Generated APK files ==="
+          find . -type f -name "*.apk" -print
+
+          APK=$(find app/build/outputs/apk/release \
+            -type f \
+            -name "*.apk" \
+            ! -name "*unaligned*" \
+            | head -n 1)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: Release APK not found!"
+            exit 1
+          fi
+
+          echo "Using APK: $APK"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+
+      # ==============================
+      # Find Android Build Tools
+      # ==============================
+      - name: Find Android Build Tools
+        id: tools
+        shell: bash
+        run: |
+          BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)
+          APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner"
+
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "ERROR: apksigner not found!"
+            exit 1
+          fi
+
+          echo "version=$BUILD_TOOLS" >> "$GITHUB_OUTPUT"
+          echo "Using: $APKSIGNER"
+
+      # ==============================
+      # Sign APK
+      # ==============================
+      - name: Sign APK
+        shell: bash
+        run: |
+          APKSIGNER="$ANDROID_HOME/build-tools/${{ steps.tools.outputs.version }}/apksigner"
+
+          "$APKSIGNER" sign \
+            --ks key.jks \
+            --ks-key-alias SDC \
+            --ks-pass pass:password \
+            --key-pass pass:password \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out app-signed.apk \
+            "${{ steps.apk.outputs.apk }}"
+
+      # ==============================
+      # Verify signature
+      # ==============================
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          APKSIGNER="$ANDROID_HOME/build-tools/${{ steps.tools.outputs.version }}/apksigner"
+
+          "$APKSIGNER" verify \
+            --verbose \
+            --print-certs \
+            app-signed.apk
+
+          echo "APK signature verified successfully"
+
+      # ==============================
+      # Rename APK
+      # ==============================
+      - name: Rename signed APK
+        shell: bash
+        run: |
+          APK_NAME="app-${SHORT_SHA}.apk"
+
+          mv app-signed.apk "$APK_NAME"
+
+          echo "APK_NAME=$APK_NAME" >> "$GITHUB_ENV"
+
+          echo "Final APK: $APK_NAME"
+
+      # ==============================
+      # Create GitHub Release
+      # ==============================
+      - name: Create GitHub Release and upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.SHORT_SHA }}
+          name: Release ${{ env.SHORT_SHA }}
+          generate_release_notes: true
+          files: ${{ env.APK_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ==============================
+      # Also upload as workflow artifact
+      # ==============================
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ env.SHORT_SHA }}
+          path: ${{ env.APK_NAME }}
+          if-no-files-found: error
+          retention-days: 30
+
+      # ==============================
+      # Remove private key
+      # ==============================
+      - name: Remove signing key
+        if: always()
+        run: rm -f key.jks
